@@ -50,9 +50,13 @@ def getMetLoader(loader, net, use_net=True):
     # Original test metrics
     scale_factor = 41828
     # metric_names = ["CSIG","CBAK","COVL","PESQ","SSNR","STOI","SNR "]
-    metric_names = ["PESQ-WB","PESQ-NB","SNR","SSNR","STOI"]
-    overall_metrics = [[] for i in range(5)]
+    # metric_names = ["PESQ-WB","PESQ-NB","SNR","SSNR","STOI"]
+    metric_names = ["PESQ-WB"]
+    # overall_metrics = [[] for i in range(5)]
+    overall_metrics = [[]]
     for i, data in enumerate(loader):
+        # print("Start: ", i)
+        # print(len(data))
         if (i+1)%10==0:
             end_str = "\n"
         else:
@@ -81,22 +85,22 @@ def getMetLoader(loader, net, use_net=True):
             
             # ref_nb = resample(x_clean_np, 48000, 8000)
             # deg_nb = resample(x_est_np, 48000, 8000)
-            ref_nb = x_clean_np
-            deg_nb = x_est_np
-            pesq_nb = pesq(8000, ref_nb, deg_nb, 'nb')
+            # ref_nb = x_clean_np
+            # deg_nb = x_est_np
+            # pesq_nb = pesq(8000, ref_nb, deg_nb, 'nb')
 
             #print(new_scores)
             #print(metrics.PESQ, metrics.STOI)
 
             overall_metrics[0].append(pesq_wb)
-            overall_metrics[1].append(pesq_nb)
+            # overall_metrics[1].append(pesq_nb)
             # overall_metrics[2].append(metrics.SNR)
             # overall_metrics[3].append(metrics.SSNR)
             # overall_metrics[4].append(metrics.STOI)
     print()
     print("Sample metrics computed")
     results = {}
-    for i in range(2):
+    for i in range(1):
         temp = {}
         temp["Mean"] =  np.mean(overall_metrics[i])
         temp["STD"]  =  np.std(overall_metrics[i])
@@ -109,18 +113,19 @@ def getMetLoader(loader, net, use_net=True):
     else:
         addon = "(pre denoising)"
     print("Metrics on test data",addon)
-    for i in range(5):
-        print("{} : {:.3f}+/-{:.3f}".format(metric_names[i], np.mean(overall_metrics[i]), np.std(overall_metrics[i])))
+    # for i in range(5):
+        # print("{} : {:.3f}+/-{:.3f}".format(metric_names[i], np.mean(overall_metrics[i]), np.std(overall_metrics[i])))
+    print("{} : {:.3f}+/-{:.3f}".format(metric_names, np.mean(overall_metrics), np.std(overall_metrics)))
     return results
 
-def train_epoch(net, train_loader, loss_fn, opt, DEVICE):
+def train_epoch(net, train_loader, loss_fn, opt):
     net.train()
     train_ep_loss = 0
     counter = 0
 
     for x_noise, x_clean in train_loader:
         x_noise, x_clean = x_noise.to(DEVICE), x_clean.to(DEVICE)
-
+        
         # zero gradients
         net.zero_grad()
 

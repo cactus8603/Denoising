@@ -34,21 +34,31 @@ if __name__ == '__main__':
 
     # Set dataloader
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=2, shuffle=True) 
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True) 
 
     ### test
-    x_noise_stft = train_dataset
-    print(x_noise_stft)
-    for i, data in enumerate(train_loader):
-        print("i:", i)
+    # x_noise_stft = train_dataset
+    # print(x_noise_stft)
+    # for i, data in enumerate(train_loader):
+        # print("i:", i)
         # print(data)
-        break
+        # break
+    
+    for_test_noise_file = train_noise_file[:20]
+    for_test_clean_file = train_clean_file[:20]
+    for_test_train_dataset = audioDataset(for_test_noise_file, for_test_clean_file, n_fft, hop_length)
+    for_test_train_loader = DataLoader(for_test_train_dataset, batch_size=1, shuffle=False)
 
-    dcunet20 = DCUnet20(n_fft, hop_length).to(DEVICE)
-    # result = getMetLoader(train_loader, dcunet20, False)
+    for_test_noise_file = test_noise_file[:20]
+    for_test_clean_file = test_clean_file[:20]
+    for_test_test_dataset = audioDataset(for_test_noise_file, for_test_clean_file, n_fft, hop_length)
+    for_test_test_loader = DataLoader(for_test_test_dataset, batch_size=1, shuffle=False)
+
+    # dcunet20 = DCUnet20(n_fft, hop_length).to(DEVICE)
+    # result = getMetLoader(for_test_loader, dcunet20, False)
     # print(result)
-
-    """
+    
+    
     # # clear cache
     gc.collect()
     torch.cuda.empty_cache()
@@ -57,6 +67,6 @@ if __name__ == '__main__':
     opt = torch.optim.Adam(dcunet20.parameters())
     loss_func = loss_fn
     scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=1, gamma=0.1)
-
-    train_losses, test_losses = train(dcunet20, train_loader, test_loader, loss_func, opt, scheduler, 4)
-    """    
+    train_losses, test_losses = train(dcunet20, for_test_train_loader, for_test_test_loader, loss_func, opt, scheduler, 3)
+    # train_losses, test_losses = train(dcunet20, train_loader, test_loader, loss_func, opt, scheduler, 4)
+    

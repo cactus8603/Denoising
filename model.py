@@ -16,7 +16,7 @@ class audioDataset(Dataset):
         self.hop_length = hop_length
         self.len_ = len(self.noise)
 
-        self.max_len = 320000  # 16000 per second * 20
+        self.max_len = 192000  # 16000 per second * 12
     
     def __len__(self):
         return self.len_ 
@@ -43,20 +43,19 @@ class audioDataset(Dataset):
 
     def _preprocess(self, src):
         # To pre process, set 20s per file
-        processed = np.zeros((1, self.max_len), dtype='float32')
+        
         src = src.numpy()
-        length = len(src)
-        processed[0, -length:] = src[0, :length]
-
-        print("after shape of process: ", processed.shape)
-        print("after shape of src: ", src.shape)
-        print(processed[0]==src[0])
-        print("\n")
+        length = src.size
+        empty = []
+        empty = np.zeros((1, max(self.max_len-length, self.max_len)), dtype='float32')
+        processed = np.concatenate((src, empty), axis=1)
         processed = torch.from_numpy(processed)
-        return processed
 
-    def __repr__(self):
-        return "<met %s %s>" % (len(self.noise), len(self.clean))
+        return processed
+        
+
+    # def __repr__(self):
+        # return "<met %s %s>" % (len(self.noise), len(self.clean))
 
 class cconv2d(nn.Module):
     def __init__(self, in_c, out_c, kernel_size, stride=1, padding=0):
@@ -94,12 +93,12 @@ class cconv2d(nn.Module):
         output_real = self.real_conv(x_real) - self.im_conv(x_im)
         output_im = self.im_conv(x_real) + self.real_conv(x_im)
 
-        output = torch.stack([output_real, output_im], dim=-1)
+        output = torch.stack((output_real, output_im), dim=-1)
         return output
 
 
 class cconvTranspose2d(nn.Module):
-    def __init__(self, in_c, out_c, kernel_size, stride=1, padding=0):
+    def __init__(self, in_c, out_c, kernel_size, stride=1, padding=0, output_padding=0):
         super().__init__()
 
         self.in_channels = in_c
@@ -107,20 +106,23 @@ class cconvTranspose2d(nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
+        self.output_padding = output_padding
 
         self.real_conv = nn.ConvTranspose2d(
             in_channels = self.in_channels,
             out_channels = self.out_channels,
             kernel_size = self.kernel_size,
             padding = self.padding,
-            stride = self.stride 
+            stride = self.stride,
+            output_padding = self.output_padding
         )
         self.im_conv = nn.ConvTranspose2d(
             in_channels = self.in_channels,
             out_channels = self.out_channels,
             kernel_size = self.kernel_size,
             padding = self.padding,
-            stride = self.stride 
+            stride = self.stride,
+            output_padding = self.output_padding
         )
 
         # Initialization (Glorot initialization)
@@ -134,7 +136,7 @@ class cconvTranspose2d(nn.Module):
         output_real = self.real_conv(x_real) - self.im_conv(x_im)
         output_im = self.im_conv(x_real) + self.real_conv(x_im)
 
-        output = torch.stack([output_real, output_im], dim=-1)
+        output = torch.stack((output_real, output_im), dim=-1)
         return output
 
 class batchNorm2d(nn.Module):
@@ -164,17 +166,17 @@ class batchNorm2d(nn.Module):
         )
 
     def forward(self, x):
-        x_real = [..., 0]
-        x_im = [..., 0]
+        x_real = x[..., 0]
+        x_im = x[..., 0]
         
         norm_real = self.norm_real(x_real)
         norm_im = self.norm_im(x_im)
 
-        output = torch.stack([norm_real, norm_im], dim=-1)
+        output = torch.stack((norm_real, norm_im), dim=-1)
         return output
     
 class encoder(nn.Module):
-    def __init__(self, in_c, out_c, filter_size=(7,5), stride_size=(2,2), padding=(0,0)):
+    def __init__(self, in_c=1, out_c=45, filter_size=(7,5), stride_size=(2,2), padding=(0,0)):
         super().__init__()
         
         self.in_c = in_c
@@ -205,7 +207,7 @@ class encoder(nn.Module):
         return act
 
 class decoder(nn.Module):
-    def __init__(self, in_c, out_c, filter_size=(7,5), stride_size=(2,2), padding=(0,0), output_padding=(0,0), last_layer=False):
+    def __init__(self, in_c=1, out_c=45, filter_size=(7,5), stride_size=(2,2), padding=(0,0), output_padding=(0,0), last_layer=False):
         super().__init__()
 
         self.filter_size = filter_size
@@ -214,13 +216,15 @@ class decoder(nn.Module):
         self.out_c = out_c
         self.padding = padding
         self.last_layer = last_layer
+        self.output_padding = output_padding
 
         self.convt = cconvTranspose2d(
             in_c = self.in_c,
             out_c = self.out_c,
             kernel_size = self.filter_size,
             stride = stride_size,
-            padding = self.padding
+            padding = self.padding,
+            output_padding = self.output_padding
         )
 
         self.batch_norm = batchNorm2d(
@@ -253,12 +257,19 @@ class DCUnet20(nn.Module):
         # for istft
         self.n_fft = n_fft
         self.hop_length = hop_length
-        
-        self.set_size(model_complexity=int(45//1.414), input_channels=1, model_depth=20)
+
+        # self.set_size(model_complexity=int(45//1.414), input_channels=1, model_depth=20)
+        self.set_size(model_complexity=32, input_channels=1, model_depth=20)
         self.encoders = []
-        self.model_length = 20 // 2
+        self.model_length = 10
 
         for i in range(self.model_length):
+            print("input channel: ",self.enc_channels[i])
+            print("output channel", self.enc_channels[i + 1])
+            print("kernel", self.enc_kernel_sizes[i])
+            print("stride", self.enc_strides[i])
+            print("padding", self.enc_paddings[i])
+            print('\n')
             module = encoder(in_c=self.enc_channels[i], 
                              out_c=self.enc_channels[i + 1],
                              filter_size=self.enc_kernel_sizes[i], 
@@ -341,12 +352,12 @@ class DCUnet20(nn.Module):
                                      (1, 7),
                                      (6, 4),
                                      (7, 5),
-                                     (5, 3),
-                                     (5, 3),
-                                     (5, 3),
-                                     (5, 3),
-                                     (5, 3),
-                                     (5, 3)]
+                                     (5, 3),  
+                                     (5, 3),  
+                                     (5, 3),  
+                                     (5, 3),  
+                                     (5, 3), 
+                                     (5, 3)] 
 
             self.enc_strides = [(1, 1),
                                 (1, 1),
@@ -359,8 +370,8 @@ class DCUnet20(nn.Module):
                                 (2, 2),
                                 (2, 1)]
 
-            self.enc_paddings = [(3, 0),
-                                 (0, 3),
+            self.enc_paddings = [(0, 0), # (3, 0)
+                                 (0, 0), # (0, 3)
                                  (0, 0),
                                  (0, 0),
                                  (0, 0),
