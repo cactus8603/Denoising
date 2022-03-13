@@ -1,4 +1,5 @@
 import gc
+from matplotlib.style import use
 from tqdm import tqdm
 
 import numpy as np
@@ -45,7 +46,6 @@ def loss_fn(x_, y_pred, y_true, eps=1e-8):
 def getMetLoader(loader, net, use_net=True):
 
     wonky_samples = []
-
     net.eval()
     # Original test metrics
     scale_factor = 41828
@@ -56,7 +56,7 @@ def getMetLoader(loader, net, use_net=True):
     overall_metrics = [[]]
     for i, data in enumerate(loader):
         # print("Start: ", i)
-        # print(len(data))
+        # print(data[0])
         if (i+1)%10==0:
             end_str = "\n"
         else:
@@ -67,22 +67,27 @@ def getMetLoader(loader, net, use_net=True):
         else:
             noisy = data[0]
             clean = data[1]
+            
             if use_net: # Forward of net returns the istft version
                 x_est = net(noisy.to(DEVICE), is_istft=True)
                 x_est_np = x_est.view(-1).detach().cpu().numpy()
             else:
                 x_est_np = torch.istft(torch.squeeze(noisy, 1), n_fft=n_fft, hop_length=hop_length, normalized=True).view(-1).detach().cpu().numpy()
-                x_clean_np = torch.istft(torch.squeeze(clean, 1), n_fft=n_fft, hop_length=hop_length, normalized=True).view(-1).detach().cpu().numpy()
+                # x_clean_np = torch.istft(torch.squeeze(clean, 1), n_fft=n_fft, hop_length=hop_length, normalized=True).view(-1).detach().cpu().numpy()
             
-        
+            # print("use net", (use_net))
+            x_clean_np = torch.istft(torch.squeeze(clean, 1), n_fft=n_fft, hop_length=hop_length, normalized=True).view(-1).detach().cpu().numpy()
+            
             # metrics = AudioMetrics2(x_clean_np, x_est_np, 16000)
-            
+            # print(type(ref_wb), type(x_clean_np))
             # ref_wb = resample(x_clean_np, 48000, 16000)
             # deg_wb = resample(x_est_np, 48000, 16000)
-            ref_wb = x_clean_np
-            deg_wb = x_est_np
-            pesq_wb = pesq(16000, ref_wb, deg_wb, 'wb')
-            
+            # ref_wb = x_clean_np
+            # deg_wb = x_est_np
+            # pesq_wb = pesq(16000, ref_wb, deg_wb, 'wb')
+
+            # print(x_clean_np)
+            pesq_wb = pesq(16000, x_clean_np, x_est_np, 'wb')
             # ref_nb = resample(x_clean_np, 48000, 8000)
             # deg_nb = resample(x_est_np, 48000, 8000)
             # ref_nb = x_clean_np
@@ -97,8 +102,8 @@ def getMetLoader(loader, net, use_net=True):
             # overall_metrics[2].append(metrics.SNR)
             # overall_metrics[3].append(metrics.SSNR)
             # overall_metrics[4].append(metrics.STOI)
-    print()
-    print("Sample metrics computed")
+    # print()
+    # print("Sample metrics computed")
     results = {}
     for i in range(1):
         temp = {}
@@ -107,12 +112,14 @@ def getMetLoader(loader, net, use_net=True):
         temp["Min"]  =  min(overall_metrics[i])
         temp["Max"]  =  max(overall_metrics[i])
         results[metric_names[i]] = temp
+    """
     print("Averages computed")
     if use_net:
         addon = "(cleaned by model)"
     else:
         addon = "(pre denoising)"
     print("Metrics on test data",addon)
+    """
     # for i in range(5):
         # print("{} : {:.3f}+/-{:.3f}".format(metric_names[i], np.mean(overall_metrics[i]), np.std(overall_metrics[i])))
     print("{} : {:.3f}+/-{:.3f}".format(metric_names, np.mean(overall_metrics), np.std(overall_metrics)))
@@ -124,6 +131,8 @@ def train_epoch(net, train_loader, loss_fn, opt):
     counter = 0
 
     for x_noise, x_clean in train_loader:
+        if(counter%200==0):
+            print("count", counter)
         x_noise, x_clean = x_noise.to(DEVICE), x_clean.to(DEVICE)
         
         # zero gradients
@@ -176,17 +185,17 @@ def test_epoch(net, test_loader, loss_fn, use_net=True):
 def train(net, train_loader, test_loader, loss_fn, opt, scheduler, epochs):
     train_loss_record = []
     test_loss_record = []
-
     for epoch in tqdm(range(epochs)):
+        
         if (epoch==0):
-            print("Pre-training evaluation")
-            met = getMetLoader(test_loader, net, False)
-
+            # print("Pre-training evaluation")
+            # met = getMetLoader(test_loader, net, False)
+            """
             with open("./results.txt", "w+") as f:
                 f.write("INIT: \n")
                 f.write(str(met))
                 f.write("\n")
-    
+            """
         train_loss = train_epoch(net, train_loader, loss_fn, opt)
         test_loss = 0
         scheduler.step()
@@ -203,10 +212,10 @@ def train(net, train_loader, test_loader, loss_fn, opt, scheduler, epochs):
 
 
         # save model
-        # torch.save(net.state_dict(), "output/Weights/dc20_model_"+str(epoch+1)+'.pth')
-        # torch.save(opt.state_dict(), "output/Weights/dc20_opt_"+str(epoch+1)+'.pth')
+        torch.save(net.state_dict(), "output/dc20_model_"+str(epoch+1)+'.pth')
+        # torch.save(opt.state_dict(), "output/dc20_opt_"+str(epoch+1)+'.pth')
         
-        # print("Models saved")
+        print("Models saved")
 
         # clear cache
         torch.cuda.empty_cache()

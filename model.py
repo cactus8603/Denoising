@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torchaudio
 from torch.utils.data import Dataset, DataLoader
+import soundfile as sf
 
 n_fft = 64
 hop_length = 16
@@ -16,13 +17,17 @@ class audioDataset(Dataset):
         self.hop_length = hop_length
         self.len_ = len(self.noise)
 
-        self.max_len = 192000  # 16000 per second * 12
+        self.max_len = 240000  # 16000 per second * 15
     
     def __len__(self):
         return self.len_ 
 
     def load_audio(self, file):
-        wav, _ = torchaudio.load(file)
+        # wav, _ = torchaudio.load(file)
+        
+        wav, _ = sf.read(file)
+        wav = wav.reshape(1,wav.size)
+
         return wav
 
     def __getitem__(self, idx):
@@ -44,13 +49,21 @@ class audioDataset(Dataset):
     def _preprocess(self, src):
         # To pre process, set 20s per file
         
-        src = src.numpy()
-        length = src.size
-        empty = []
-        empty = np.zeros((1, max(self.max_len-length, self.max_len)), dtype='float32')
-        processed = np.concatenate((src, empty), axis=1)
-        processed = torch.from_numpy(processed)
+        # src = src.numpy() # for torchaudio
 
+        length = src.size
+        processed = []
+        empty = []
+        
+        if (self.max_len > length):
+            empty = np.zeros((1, self.max_len-length), dtype='float32')
+            processed = np.concatenate((src, empty), axis=1)
+            processed = torch.from_numpy(processed)
+   
+        else:
+            processed = torch.tensor(processed[self.max_len:])
+
+        processed = processed.type(torch.FloatTensor)
         return processed
         
 
@@ -259,17 +272,12 @@ class DCUnet20(nn.Module):
         self.hop_length = hop_length
 
         # self.set_size(model_complexity=int(45//1.414), input_channels=1, model_depth=20)
-        self.set_size(model_complexity=32, input_channels=1, model_depth=20)
+        self.set_size(model_complexity=32, input_channels=1, model_depth=10)
         self.encoders = []
-        self.model_length = 10
+        self.model_length = 5
 
         for i in range(self.model_length):
-            print("input channel: ",self.enc_channels[i])
-            print("output channel", self.enc_channels[i + 1])
-            print("kernel", self.enc_kernel_sizes[i])
-            print("stride", self.enc_strides[i])
-            print("padding", self.enc_paddings[i])
-            print('\n')
+            
             module = encoder(in_c=self.enc_channels[i], 
                              out_c=self.enc_channels[i + 1],
                              filter_size=self.enc_kernel_sizes[i], 
@@ -307,14 +315,30 @@ class DCUnet20(nn.Module):
         for i, encoder in enumerate(self.encoders):
             xs.append(x)
             x = encoder(x)
-            # print('Encoder : ', x.shape)
+            """
+            print(i, ' Encoder : ', x.shape)
+            print("input channel: ",self.enc_channels[i])
+            print("output channel", self.enc_channels[i + 1])
+            print("kernel", self.enc_kernel_sizes[i])
+            print("stride", self.enc_strides[i])
+            print("padding", self.enc_paddings[i])
+            print('\n')
+            """
             
         p = x
         for i, decoder in enumerate(self.decoders):
             p = decoder(p)
             if i == self.model_length - 1:
                 break
-            # print('Decoder : ', p.shape)
+            """
+            print(i, 'Decoder : ', p.shape, xs[self.model_length - 1 - i].shape)
+            print("input channel: ",self.dec_channels[i])
+            print("output channel", self.dec_channels[i + 1])
+            print("kernel", self.dec_kernel_sizes[i])
+            print("stride", self.dec_strides[i])
+            print("padding", self.dec_paddings[i])
+            print('\n')
+            """
             p = torch.cat([p, xs[self.model_length - 1 - i]], dim=1)
         
         # u9 - the mask
@@ -333,105 +357,105 @@ class DCUnet20(nn.Module):
         return output
 
     
-    def set_size(self, model_complexity, model_depth=20, input_channels=1):
+    def set_size(self, model_complexity, model_depth=10, input_channels=1):
 
-        if model_depth == 20:
+        if model_depth == 10:
             self.enc_channels = [input_channels,
                                  model_complexity,
                                  model_complexity,
                                  model_complexity * 2,
                                  model_complexity * 2,
-                                 model_complexity * 2,
-                                 model_complexity * 2,
-                                 model_complexity * 2,
-                                 model_complexity * 2,
-                                 model_complexity * 2,
+                                 # model_complexity * 2,
+                                 # model_complexity * 2,
+                                 # model_complexity * 2,
+                                 # model_complexity * 2,
+                                 # model_complexity * 2,
                                  128]
 
             self.enc_kernel_sizes = [(7, 1),
                                      (1, 7),
-                                     (6, 4),
-                                     (7, 5),
-                                     (5, 3),  
-                                     (5, 3),  
-                                     (5, 3),  
-                                     (5, 3),  
-                                     (5, 3), 
-                                     (5, 3)] 
+                                     (6, 4), # (6,4)
+                                     (3, 3), # (3,2)
+                                     # (2, 3), # (3,3)
+                                     # (2, 3), # (5,3)
+                                     # (2, 3), # (5,3)  
+                                     # (2, 3), # (5,3)  
+                                     # (2, 3), # (5,3) 
+                                     (2, 3)] # (5,3) 
 
-            self.enc_strides = [(1, 1),
-                                (1, 1),
-                                (2, 2),
-                                (2, 1),
-                                (2, 2),
-                                (2, 1),
-                                (2, 2),
-                                (2, 1),
-                                (2, 2),
-                                (2, 1)]
+            self.enc_strides = [(1, 2), # (1,1)
+                                (1, 2), # (1,1)
+                                (2, 3), # (2,2)
+                                (2, 3), # (2,1)
+                                # (2, 2), # (2,2)
+                                # (1, 2), # (2,1)
+                                # (2, 2), # (2,2)
+                                # (1, 2), # (2,1)
+                                # (2, 2), # (2,2)
+                                (2, 2)] # (2,1)
 
-            self.enc_paddings = [(0, 0), # (3, 0)
-                                 (0, 0), # (0, 3)
+            self.enc_paddings = [(3, 0), 
+                                 (0, 3), 
                                  (0, 0),
                                  (0, 0),
-                                 (0, 0),
-                                 (0, 0),
-                                 (0, 0),
-                                 (0, 0),
-                                 (0, 0),
+                                 # (0, 0),
+                                 # (0, 0),
+                                 # (0, 0),
+                                 # (0, 0),
+                                 # (0, 0),
                                  (0, 0)]
 
             self.dec_channels = [0,
-                                 model_complexity * 2,
-                                 model_complexity * 2,
-                                 model_complexity * 2,
-                                 model_complexity * 2,
-                                 model_complexity * 2,
+                                 # model_complexity * 2,
+                                 # model_complexity * 2,
+                                 # model_complexity * 2,
+                                 # model_complexity * 2,
+                                 # model_complexity * 2,
                                  model_complexity * 2,
                                  model_complexity * 2,
                                  model_complexity,
                                  model_complexity,
                                  1]
 
-            self.dec_kernel_sizes = [(6, 3), 
-                                     (6, 3),
-                                     (6, 3),
-                                     (6, 4),
-                                     (6, 3),
-                                     (6, 4),
-                                     (8, 5),
-                                     (7, 5),
+            self.dec_kernel_sizes = [(2, 4), 
+                                     # (2, 3),
+                                     # (2, 3),
+                                     # (2, 4),
+                                     # (2, 4),
+                                     # (2, 4),
+                                     (4, 5),
+                                     (7, 4),
                                      (1, 7),
                                      (7, 1)]
 
-            self.dec_strides = [(2, 1), #
-                                (2, 2), #
-                                (2, 1), #
-                                (2, 2), #
-                                (2, 1), #
-                                (2, 2), #
-                                (2, 1), #
-                                (2, 2), #
-                                (1, 1),
-                                (1, 1)]
+            self.dec_strides = [(2, 2), #
+                                # (2, 2), #
+                                # (1, 2), #
+                                # (2, 2), #
+                                # (1, 2), #
+                                # (2, 2), #
+                                (2, 3), #
+                                (2, 3), #
+                                (1, 2),
+                                (1, 2)]
 
             self.dec_paddings = [(0, 0),
-                                 (0, 0),
-                                 (0, 0),
-                                 (0, 0),
-                                 (0, 0),
-                                 (0, 0),
+                                 # (0, 0),
+                                 # (0, 0),
+                                 # (0, 0),
+                                 # (0, 0),
+                                 # (0, 0),
                                  (0, 0),
                                  (0, 0),
                                  (0, 3),
                                  (3, 0)]
             
             self.dec_output_padding = [(0,0),
-                                       (0,0),
-                                       (0,0),
-                                       (0,0),
-                                       (0,0),
-                                       (0,0),
+                                       # (0,0),
+                                       # (0,0),
+                                       # (0,0),
+                                       # (0,0),
+                                       # (0,0),
                                        (0,0),
                                        (0,0),
                                        (0,0),
