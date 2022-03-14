@@ -272,9 +272,9 @@ class DCUnet20(nn.Module):
         self.hop_length = hop_length
 
         # self.set_size(model_complexity=int(45//1.414), input_channels=1, model_depth=20)
-        self.set_size(model_complexity=32, input_channels=1, model_depth=10)
+        self.set_size(model_complexity=32, input_channels=1, model_depth=16)
         self.encoders = []
-        self.model_length = 5
+        self.model_length = 8
 
         for i in range(self.model_length):
             
@@ -315,6 +315,7 @@ class DCUnet20(nn.Module):
         for i, encoder in enumerate(self.encoders):
             xs.append(x)
             x = encoder(x)
+            
             """
             print(i, ' Encoder : ', x.shape)
             print("input channel: ",self.enc_channels[i])
@@ -339,6 +340,7 @@ class DCUnet20(nn.Module):
             print("padding", self.dec_paddings[i])
             print('\n')
             """
+            
             p = torch.cat([p, xs[self.model_length - 1 - i]], dim=1)
         
         # u9 - the mask
@@ -357,17 +359,17 @@ class DCUnet20(nn.Module):
         return output
 
     
-    def set_size(self, model_complexity, model_depth=10, input_channels=1):
+    def set_size(self, model_complexity, model_depth=16, input_channels=1):
 
-        if model_depth == 10:
+        if model_depth == 16:
             self.enc_channels = [input_channels,
                                  model_complexity,
                                  model_complexity,
                                  model_complexity * 2,
                                  model_complexity * 2,
-                                 # model_complexity * 2,
-                                 # model_complexity * 2,
-                                 # model_complexity * 2,
+                                 model_complexity * 2,
+                                 model_complexity * 2,
+                                 model_complexity * 2,
                                  # model_complexity * 2,
                                  # model_complexity * 2,
                                  128]
@@ -375,21 +377,21 @@ class DCUnet20(nn.Module):
             self.enc_kernel_sizes = [(7, 1),
                                      (1, 7),
                                      (6, 4), # (6,4)
-                                     (3, 3), # (3,2)
-                                     # (2, 3), # (3,3)
-                                     # (2, 3), # (5,3)
-                                     # (2, 3), # (5,3)  
+                                     (2, 2), # (3,2)
+                                     (2, 2), # (3,3)
+                                     (2, 3), # (5,3)
+                                     (2, 3), # (5,3)  
                                      # (2, 3), # (5,3)  
                                      # (2, 3), # (5,3) 
-                                     (2, 3)] # (5,3) 
+                                     (2, 1)] # (5,3) 
 
             self.enc_strides = [(1, 2), # (1,1)
                                 (1, 2), # (1,1)
-                                (2, 3), # (2,2)
-                                (2, 3), # (2,1)
-                                # (2, 2), # (2,2)
-                                # (1, 2), # (2,1)
-                                # (2, 2), # (2,2)
+                                (1, 2), # (2,2)
+                                (2, 2), # (2,1)
+                                (2, 2), # (2,2)
+                                (1, 2), # (2,1)
+                                (1, 2), # (2,2)
                                 # (1, 2), # (2,1)
                                 # (2, 2), # (2,2)
                                 (2, 2)] # (2,1)
@@ -398,9 +400,9 @@ class DCUnet20(nn.Module):
                                  (0, 3), 
                                  (0, 0),
                                  (0, 0),
-                                 # (0, 0),
-                                 # (0, 0),
-                                 # (0, 0),
+                                 (0, 0),
+                                 (0, 0),
+                                 (0, 0),
                                  # (0, 0),
                                  # (0, 0),
                                  (0, 0)]
@@ -408,43 +410,43 @@ class DCUnet20(nn.Module):
             self.dec_channels = [0,
                                  # model_complexity * 2,
                                  # model_complexity * 2,
-                                 # model_complexity * 2,
-                                 # model_complexity * 2,
-                                 # model_complexity * 2,
+                                 model_complexity * 2,
+                                 model_complexity * 2,
+                                 model_complexity * 2,
                                  model_complexity * 2,
                                  model_complexity * 2,
                                  model_complexity,
                                  model_complexity,
                                  1]
 
-            self.dec_kernel_sizes = [(2, 4), 
+            self.dec_kernel_sizes = [(3, 2), 
                                      # (2, 3),
                                      # (2, 3),
-                                     # (2, 4),
-                                     # (2, 4),
-                                     # (2, 4),
-                                     (4, 5),
-                                     (7, 4),
+                                     (2, 3),
+                                     (2, 4),
+                                     (2, 3),
+                                     (2, 2),
+                                     (6, 5),
                                      (1, 7),
                                      (7, 1)]
 
             self.dec_strides = [(2, 2), #
                                 # (2, 2), #
                                 # (1, 2), #
-                                # (2, 2), #
-                                # (1, 2), #
-                                # (2, 2), #
-                                (2, 3), #
-                                (2, 3), #
+                                (1, 2), #
+                                (1, 2), #
+                                (2, 2), #
+                                (2, 2), #
+                                (1, 2), #
                                 (1, 2),
                                 (1, 2)]
 
             self.dec_paddings = [(0, 0),
                                  # (0, 0),
                                  # (0, 0),
-                                 # (0, 0),
-                                 # (0, 0),
-                                 # (0, 0),
+                                 (0, 0),
+                                 (0, 0),
+                                 (0, 0),
                                  (0, 0),
                                  (0, 0),
                                  (0, 3),
@@ -453,9 +455,9 @@ class DCUnet20(nn.Module):
             self.dec_output_padding = [(0,0),
                                        # (0,0),
                                        # (0,0),
-                                       # (0,0),
-                                       # (0,0),
-                                       # (0,0),
+                                       (0,0),
+                                       (0,0),
+                                       (0,0),
                                        (0,0),
                                        (0,0),
                                        (0,0),

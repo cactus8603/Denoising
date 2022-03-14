@@ -131,8 +131,6 @@ def train_epoch(net, train_loader, loss_fn, opt):
     counter = 0
 
     for x_noise, x_clean in train_loader:
-        if(counter%200==0):
-            print("count", counter)
         x_noise, x_clean = x_noise.to(DEVICE), x_clean.to(DEVICE)
         
         # zero gradients
@@ -147,6 +145,10 @@ def train_epoch(net, train_loader, loss_fn, opt):
 
         train_ep_loss += loss.item()
         counter += 1
+
+        if(counter%500==0):
+            print("count", counter)
+            print("training loss:{}".format(loss.item()))
     
     train_ep_loss /= counter
 
@@ -162,7 +164,6 @@ def test_epoch(net, test_loader, loss_fn, use_net=True):
     counter = 0
 
     for x_noise, x_clean in test_loader:
-
         x_noise, x_clean = x_noise.to(DEVICE), x_clean.to(DEVICE)
         x_pred = net(x_noise)
 
@@ -171,6 +172,10 @@ def test_epoch(net, test_loader, loss_fn, use_net=True):
 
         test_ep_loss += loss.item()
         counter += 1
+
+        if(counter%500==0):
+            print("\ncount", counter)
+            print("testing loss:{}".format(loss.item()))
     
     test_ep_loss /= counter
 
@@ -187,20 +192,22 @@ def train(net, train_loader, test_loader, loss_fn, opt, scheduler, epochs):
     test_loss_record = []
     for epoch in tqdm(range(epochs)):
         
+        """
         if (epoch==0):
             # print("Pre-training evaluation")
             # met = getMetLoader(test_loader, net, False)
-            """
+            
             with open("./results.txt", "w+") as f:
                 f.write("INIT: \n")
                 f.write(str(met))
                 f.write("\n")
-            """
+        """
         train_loss = train_epoch(net, train_loader, loss_fn, opt)
         test_loss = 0
         scheduler.step()
         print("Saving model....")
-
+        
+        
         with torch.no_grad():
             test_loss, met = test_epoch(net, test_loader, loss_fn, use_net=True)
 
@@ -209,7 +216,7 @@ def train(net, train_loader, test_loader, loss_fn, opt, scheduler, epochs):
 
         with open("./results.txt", "a") as f:
             f.write("EPOCH: {} \n{} \n".format(epoch, str(met)))
-
+        
 
         # save model
         torch.save(net.state_dict(), "output/dc20_model_"+str(epoch+1)+'.pth')

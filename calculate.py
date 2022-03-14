@@ -45,19 +45,24 @@ def print_plot_play(x, Fs):
 
 if __name__ == '__main__':
 
-    # test_pesq()
-    ref, rate = sf.read("./data/train/mixed_01001.flac")
-    print_plot_play(x=ref, Fs=rate)
+    score = 0
+    for i in range(1,500):
+        # test_pesq()
+        ref, rate = sf.read("./data/test/mined_0{index:04}.flac".format(index=int(i)))
+        # print_plot_play(x=ref, Fs=rate)
 
-    deg, rate = sf.read("./data/clean/vocal_01001.flac")
-    print_plot_play(x=deg, Fs=rate)
+        deg, rate = sf.read("./output/generate/3/vocal_0{index:04}.flac".format(index=int(i)))
+        # print_plot_play(x=deg, Fs=rate)
+        # print(deg[:len(ref)])
+        # deg = deg[len(ref):]
 
-    print(pesq(16000, ref, deg, 'wb'))
+        print(pesq(16000, ref, deg, 'wb'))
+        # sum += float(pesq(16000, ref, deg, 'wb'))
+        # ref, rate = sf.read("./data/clean/speech_bab_0dB.wav")
+        # print_plot_play(x=ref, Fs=rate)
+        # ref, rate = sf.read("./data/clean/speech.wav")
+        # print_plot_play(x=ref, Fs=rate)
 
-    # ref, rate = sf.read("./data/clean/speech_bab_0dB.wav")
-    # print_plot_play(x=ref, Fs=rate)
-    # ref, rate = sf.read("./data/clean/speech.wav")
-    # print_plot_play(x=ref, Fs=rate)
-
+    # print(score)
 
 

@@ -24,11 +24,11 @@ if __name__ == '__main__':
     clean_file = list(CLEAN_PATH_DIR.rglob('*.flac'))
 
     # div into train and test data
-    train_noise_file = noise_file[:8000] # :int(len(noise_file)/10*6)
-    train_clean_file = clean_file[:8000]
+    train_noise_file = noise_file[:28000] # :int(len(noise_file)/10*6)
+    train_clean_file = clean_file[:28000]
 
-    test_noise_file = noise_file[8000:11200] # int(len(noise_file)/10*6):
-    test_clean_file = clean_file[8000:11200]
+    test_noise_file = noise_file[28000:40000] # int(len(noise_file)/10*6):
+    test_clean_file = clean_file[28000:40000]
 
     # Set dataset
     train_dataset = audioDataset(train_noise_file, train_clean_file, n_fft, hop_length)
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     dcunet20 = DCUnet20(n_fft, hop_length).to(DEVICE)
     opt = torch.optim.Adam(dcunet20.parameters())
     loss_func = loss_fn
-    scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=1, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=1, gamma=0.5)
     # train_losses, test_losses = train(dcunet20, for_test_train_loader, for_test_test_loader, loss_func, opt, scheduler, 3)
     train_losses, test_losses = train(dcunet20, train_loader, test_loader, loss_func, opt, scheduler, 5)
     
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     """
     # for generate ans 
     
-    model_weights_path = "output/dc20_model_3.pth"
+    model_weights_path = "output/dc20_model_9.pth"
 
     dcunet20 = DCUnet20(n_fft, hop_length).to(DEVICE)
     optimizer = torch.optim.Adam(dcunet20.parameters())
@@ -105,12 +105,13 @@ if __name__ == '__main__':
         with torch.no_grad():
             gen = dcunet20(noise.to(DEVICE), is_istft=True)
         gen_np = gen[0].view(-1).detach().cpu().numpy()
-        sf.write("output/generate/1/vocal_0{index:04}.flac".format(index=int(idx)), gen_np, 16000)
+        sf.write("output/generate/temp/vocal_0{index:04}.flac".format(index=int(idx)), gen_np, 16000)
         del gen
         del gen_np
         torch.cuda.empty_cache()
     """
-        
+    
+    
         
 
 
