@@ -64,9 +64,17 @@ if __name__ == '__main__':
     # # clear cache
     gc.collect()
     torch.cuda.empty_cache()
+
+    model_weights_path = "output/6/dc20_model_4.pth"
+    checkpoint = torch.load(model_weights_path,
+                            map_location=torch.device('cuda')
+                       )
     dcunet20 = DCUnet20(n_fft, hop_length).to(DEVICE)
     opt = torch.optim.Adam(dcunet20.parameters())
     loss_func = loss_fn
+
+    dcunet20.load_state_dict(checkpoint)
+
     scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=1, gamma=0.8)
     # train_losses, test_losses = train(dcunet20, for_test_train_loader, for_test_test_loader, loss_func, opt, scheduler, 3)
     train_losses, test_losses = train(dcunet20, train_loader, test_loader, loss_func, opt, scheduler, 10)
