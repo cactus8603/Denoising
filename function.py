@@ -174,7 +174,7 @@ def test_epoch(net, test_loader, loss_fn, use_net=True):
         counter += 1
 
         if(counter%500==0):
-            print("\ncount", counter)
+            print("count", counter)
             print("testing loss:{}".format(loss.item()))
     
     test_ep_loss /= counter
@@ -191,7 +191,7 @@ def train(net, train_loader, test_loader, loss_fn, opt, scheduler, epochs):
     train_loss_record = []
     test_loss_record = []
     for epoch in tqdm(range(epochs)):
-        
+
         """
         if (epoch==0):
             # print("Pre-training evaluation")

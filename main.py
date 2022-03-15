@@ -67,16 +67,16 @@ if __name__ == '__main__':
     dcunet20 = DCUnet20(n_fft, hop_length).to(DEVICE)
     opt = torch.optim.Adam(dcunet20.parameters())
     loss_func = loss_fn
-    scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=1, gamma=0.5)
+    scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=1, gamma=0.8)
     # train_losses, test_losses = train(dcunet20, for_test_train_loader, for_test_test_loader, loss_func, opt, scheduler, 3)
-    train_losses, test_losses = train(dcunet20, train_loader, test_loader, loss_func, opt, scheduler, 5)
+    train_losses, test_losses = train(dcunet20, train_loader, test_loader, loss_func, opt, scheduler, 10)
     
 
 
     """
     # for generate ans 
     
-    model_weights_path = "output/dc20_model_9.pth"
+    model_weights_path = "output/dc20_model_4.pth"
 
     dcunet20 = DCUnet20(n_fft, hop_length).to(DEVICE)
     optimizer = torch.optim.Adam(dcunet20.parameters())
