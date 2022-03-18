@@ -4,7 +4,8 @@ from scipy.io import wavfile
 from pesq import pesq
 import soundfile as sf 
 from matplotlib import pyplot as plt
-import os
+from tqdm import trange
+import time
 
 def test_pesq():
     ref, rate = sf.read("./data/train/mixed_01001.flac")
@@ -46,23 +47,31 @@ def print_plot_play(x, Fs):
 if __name__ == '__main__':
 
     score = 0
-    for i in range(1,500):
+    index = []
+    for i in trange(1,601):
         # test_pesq()
         ref, rate = sf.read("./data/test/mined_0{index:04}.flac".format(index=int(i)))
         # print_plot_play(x=ref, Fs=rate)
 
-        deg, rate = sf.read("./output/generate/3/vocal_0{index:04}.flac".format(index=int(i)))
+        deg, rate = sf.read("./output/generate/6-1-2/vocal_0{index:04}.flac".format(index=int(i)))
         # print_plot_play(x=deg, Fs=rate)
         # print(deg[:len(ref)])
         # deg = deg[len(ref):]
-
-        print(pesq(16000, ref, deg, 'wb'))
+        
+        try:
+            score += pesq(16000, ref, deg, 'wb')
+            # print(pesq(16000, ref, deg, 'wb'))
+            # time.sleep(0.1)
+        except KeyboardInterrupt:
+            raise
+        except :
+            index.append(i)
+            pass
         # sum += float(pesq(16000, ref, deg, 'wb'))
         # ref, rate = sf.read("./data/clean/speech_bab_0dB.wav")
         # print_plot_play(x=ref, Fs=rate)
         # ref, rate = sf.read("./data/clean/speech.wav")
         # print_plot_play(x=ref, Fs=rate)
 
-    # print(score)
-
-
+    print(score)
+    print(index)

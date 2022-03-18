@@ -35,8 +35,8 @@ if __name__ == '__main__':
     test_dataset = audioDataset(test_noise_file, test_clean_file, n_fft, hop_length)
 
     # Set dataloader
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=4, shuffle=True) 
+    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=8, shuffle=True) 
 
     ### test
     # x_noise_stft = train_dataset
@@ -46,13 +46,13 @@ if __name__ == '__main__':
         # print(data)
         # break
     
-    for_test_noise_file = train_noise_file[:200]
-    for_test_clean_file = train_clean_file[:200]
+    for_test_noise_file = train_noise_file[:2100]
+    for_test_clean_file = train_clean_file[:2100]
     for_test_train_dataset = audioDataset(for_test_noise_file, for_test_clean_file, n_fft, hop_length)
-    for_test_train_loader = DataLoader(for_test_train_dataset, batch_size=4, shuffle=False)
+    for_test_train_loader = DataLoader(for_test_train_dataset, batch_size=2, shuffle=False)
 
-    for_test_noise_file = test_noise_file[:200]
-    for_test_clean_file = test_clean_file[:200]
+    for_test_noise_file = test_noise_file[:2100]
+    for_test_clean_file = test_clean_file[:2100]
     for_test_test_dataset = audioDataset(for_test_noise_file, for_test_clean_file, n_fft, hop_length)
     for_test_test_loader = DataLoader(for_test_test_dataset, batch_size=4, shuffle=False)
     # print(for_test_test_loader)
@@ -60,31 +60,30 @@ if __name__ == '__main__':
     # result = getMetLoader(for_test_loader, dcunet20, False)
     # print(result)
     
-    
+    """
     # # clear cache
     gc.collect()
     torch.cuda.empty_cache()
 
-    model_weights_path = "output/6/dc20_model_4.pth"
-    checkpoint = torch.load(model_weights_path,
-                            map_location=torch.device('cuda')
-                       )
+    
+    # model_weights_path = "output/8/dc20_model_1.pth"
+    # checkpoint = torch.load(model_weights_path, map_location=torch.device('cuda'))
     dcunet20 = DCUnet20(n_fft, hop_length).to(DEVICE)
     opt = torch.optim.Adam(dcunet20.parameters())
     loss_func = loss_fn
 
-    dcunet20.load_state_dict(checkpoint)
+    # dcunet20.load_state_dict(checkpoint)
 
     scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=1, gamma=0.8)
     # train_losses, test_losses = train(dcunet20, for_test_train_loader, for_test_test_loader, loss_func, opt, scheduler, 3)
     train_losses, test_losses = train(dcunet20, train_loader, test_loader, loss_func, opt, scheduler, 10)
-    
-
-
     """
+
+
+    
     # for generate ans 
     
-    model_weights_path = "output/dc20_model_4.pth"
+    model_weights_path = "output/dc20_model_5.pth"
 
     dcunet20 = DCUnet20(n_fft, hop_length).to(DEVICE)
     optimizer = torch.optim.Adam(dcunet20.parameters())
@@ -117,7 +116,7 @@ if __name__ == '__main__':
         del gen
         del gen_np
         torch.cuda.empty_cache()
-    """
+    
     
     
         

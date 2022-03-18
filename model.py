@@ -17,16 +17,16 @@ class audioDataset(Dataset):
         self.hop_length = hop_length
         self.len_ = len(self.noise)
 
-        self.max_len = 240000  # 16000 per second * 15
+        self.max_len = 165000  # 16000 per second * 15
     
     def __len__(self):
         return self.len_ 
 
     def load_audio(self, file):
-        # wav, _ = torchaudio.load(file)
+        wav, _ = torchaudio.load(file)
         
-        wav, _ = sf.read(file)
-        wav = wav.reshape(1,wav.size)
+        # wav, _ = sf.read(file)
+        # wav = wav.reshape(1,wav.size)
 
         return wav
 
@@ -50,7 +50,7 @@ class audioDataset(Dataset):
         # To pre process, set 20s per file
         
         # src = src.numpy() # for torchaudio
-
+        """
         length = src.size
         processed = []
         empty = []
@@ -65,6 +65,15 @@ class audioDataset(Dataset):
 
         processed = processed.type(torch.FloatTensor)
         return processed
+        """
+        waveform = src.numpy()
+        current_len = waveform.shape[1]
+        
+        output = np.zeros((1, self.max_len), dtype='float32')
+        output[0, -current_len:] = waveform[0, :self.max_len]
+        output = torch.from_numpy(output)
+        
+        return output
         
 
     # def __repr__(self):
@@ -272,9 +281,9 @@ class DCUnet20(nn.Module):
         self.hop_length = hop_length
 
         # self.set_size(model_complexity=int(45//1.414), input_channels=1, model_depth=20)
-        self.set_size(model_complexity=32, input_channels=1, model_depth=16)
+        self.set_size(model_complexity=32, input_channels=1, model_depth=20)
         self.encoders = []
-        self.model_length = 8
+        self.model_length = 10
 
         for i in range(self.model_length):
             
@@ -326,6 +335,7 @@ class DCUnet20(nn.Module):
             print('\n')
             """
             
+            
         p = x
         for i, decoder in enumerate(self.decoders):
             p = decoder(p)
@@ -358,7 +368,7 @@ class DCUnet20(nn.Module):
         
         return output
 
-    
+    """
     def set_size(self, model_complexity, model_depth=16, input_channels=1):
 
         if model_depth == 16:
@@ -368,15 +378,15 @@ class DCUnet20(nn.Module):
                                  model_complexity * 2,
                                  model_complexity * 2,
                                  model_complexity * 2,
-                                 model_complexity * 2,
-                                 model_complexity * 2,
+                                 model_complexity * 4,
+                                 model_complexity * 4,
                                  # model_complexity * 2,
                                  # model_complexity * 2,
                                  128]
 
             self.enc_kernel_sizes = [(7, 1),
                                      (1, 7),
-                                     (6, 4), # (6,4)
+                                     (3, 2), # (6,4)
                                      (2, 2), # (3,2)
                                      (2, 2), # (3,3)
                                      (2, 3), # (5,3)
@@ -385,8 +395,8 @@ class DCUnet20(nn.Module):
                                      # (2, 3), # (5,3) 
                                      (2, 1)] # (5,3) 
 
-            self.enc_strides = [(1, 2), # (1,1)
-                                (1, 2), # (1,1)
+            self.enc_strides = [(1, 1), # (1,1)
+                                (1, 1), # (1,1)
                                 (1, 2), # (2,2)
                                 (2, 2), # (2,1)
                                 (2, 2), # (2,2)
@@ -410,11 +420,11 @@ class DCUnet20(nn.Module):
             self.dec_channels = [0,
                                  # model_complexity * 2,
                                  # model_complexity * 2,
+                                 model_complexity * 4,
+                                 model_complexity * 4,
                                  model_complexity * 2,
                                  model_complexity * 2,
-                                 model_complexity * 2,
-                                 model_complexity * 2,
-                                 model_complexity * 2,
+                                 model_complexity * 2, # * 2 
                                  model_complexity,
                                  model_complexity,
                                  1]
@@ -423,10 +433,10 @@ class DCUnet20(nn.Module):
                                      # (2, 3),
                                      # (2, 3),
                                      (2, 3),
-                                     (2, 4),
                                      (2, 3),
-                                     (2, 2),
-                                     (6, 5),
+                                     (3, 2),
+                                     (3, 2),
+                                     (3, 3),
                                      (1, 7),
                                      (7, 1)]
 
@@ -438,8 +448,8 @@ class DCUnet20(nn.Module):
                                 (2, 2), #
                                 (2, 2), #
                                 (1, 2), #
-                                (1, 2),
-                                (1, 2)]
+                                (1, 1),
+                                (1, 1)]
 
             self.dec_paddings = [(0, 0),
                                  # (0, 0),
@@ -455,6 +465,110 @@ class DCUnet20(nn.Module):
             self.dec_output_padding = [(0,0),
                                        # (0,0),
                                        # (0,0),
+                                       (0,0),
+                                       (0,0),
+                                       (0,0),
+                                       (0,0),
+                                       (0,0),
+                                       (0,0),
+                                       (0,0)]
+        """
+    def set_size(self, model_complexity, model_depth=20, input_channels=1):
+    
+        if model_depth == 20:
+            self.enc_channels = [input_channels,
+                                 model_complexity,
+                                 model_complexity,
+                                 model_complexity * 2,
+                                 model_complexity * 2,
+                                 model_complexity * 2,
+                                 model_complexity * 4,
+                                 model_complexity * 4,
+                                 model_complexity * 8,
+                                 model_complexity * 8,
+                                 128]
+
+            self.enc_kernel_sizes = [(7, 1),
+                                     (1, 7),
+                                     (6, 4),
+                                     (7, 5),
+                                     (5, 3),
+                                     (5, 3),
+                                     (5, 3),
+                                     (5, 3),
+                                     (5, 3),
+                                     (5, 3)]
+
+            self.enc_strides = [(1, 1),
+                                (1, 1),
+                                (2, 2),
+                                (2, 1),
+                                (2, 2),
+                                (2, 1),
+                                (2, 2),
+                                (2, 1),
+                                (2, 2),
+                                (2, 1)]
+
+            self.enc_paddings = [(0, 0),
+                                 (0, 2),
+                                 (1, 0),
+                                 (1, 0),
+                                 (4, 0),
+                                 (4, 0),
+                                 (4, 0),
+                                 (4, 0),
+                                 (4, 0),
+                                 (4, 0)]
+
+            self.dec_channels = [0,
+                                 model_complexity * 8,
+                                 model_complexity * 8,
+                                 model_complexity * 4,
+                                 model_complexity * 4,
+                                 model_complexity * 2,
+                                 model_complexity * 2,
+                                 model_complexity * 2,
+                                 model_complexity,
+                                 model_complexity,
+                                 1]
+
+            self.dec_kernel_sizes = [(6, 3), 
+                                     (6, 3),
+                                     (6, 3),
+                                     (6, 4),
+                                     (6, 3),
+                                     (6, 4),
+                                     (8, 5),
+                                     (7, 5),
+                                     (1, 7),
+                                     (7, 1)]
+
+            self.dec_strides = [(2, 1), #
+                                (2, 2), #
+                                (2, 1), #
+                                (2, 2), #
+                                (2, 1), #
+                                (2, 2), #
+                                (2, 1), #
+                                (2, 2), #
+                                (1, 1),
+                                (1, 1)]
+
+            self.dec_paddings = [(4, 0),
+                                 (4, 0),
+                                 (4, 0),
+                                 (4, 0),
+                                 (4, 0),
+                                 (4, 0),
+                                 (1, 0),
+                                 (1, 0),
+                                 (0, 2),
+                                 (0, 0)]
+            
+            self.dec_output_padding = [(0,0),
+                                       (0,0),
+                                       (0,0),
                                        (0,0),
                                        (0,0),
                                        (0,0),

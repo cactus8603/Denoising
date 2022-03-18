@@ -11,6 +11,8 @@ from torch.utils.data import Dataset, DataLoader
 from pesq import pesq
 from scipy import interpolate
 
+import math
+
 n_fft = 64
 hop_length = 16
 
@@ -30,16 +32,23 @@ def loss_fn(x_, y_pred, y_true, eps=1e-8):
     y_true = y_true.flatten(1)
 
     def sdr_fn(true, pred, eps=1e-8):
-        temp = torch.sum(true * pred, dim=1)
+        
+        temp = torch.abs(torch.sum(true * pred, dim=1))
         norm = torch.norm(true, p=2, dim=1) * torch.norm(pred, p=2, dim=1)
-        return - (temp / (norm + eps))
-
+        # print(temp / (norm*eps))
+        return  -(temp / (norm + eps))
+        """
+        true = torch.sum(true**2, dim=1)
+        delta = torch.sum((true-pred)**2, dim=1) + eps
+   
+        return true/delta 
+        """
     # calculate
-    temp_true = x - y_true
-    temp_pred = x - y_pred
+    delta_true = x - y_true
+    delta_pred = x - y_pred
 
-    temp = torch.sum(y_true**2, dim=1) / (torch.sum(y_true**2, dim=1) + torch.sum(temp_true**2, dim=1) + eps)
-    SDR_grade = temp * sdr_fn(y_true, y_pred) + (1-temp) * sdr_fn(temp_true, temp_pred)
+    temp = torch.abs( torch.sum(y_true**2, dim=1) / (torch.sum(y_true**2, dim=1) + torch.sum(delta_true**2, dim=1) + eps) )
+    SDR_grade = temp * sdr_fn(y_true, y_pred) + (1-temp) * sdr_fn(delta_true, delta_pred)
     
     return torch.mean(SDR_grade)
 
@@ -146,7 +155,7 @@ def train_epoch(net, train_loader, loss_fn, opt):
         train_ep_loss += loss.item()
         counter += 1
 
-        if(counter%500==0):
+        if(counter%700==0):
             print("count", counter)
             print("training loss:{}".format(loss.item()))
     
